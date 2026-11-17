@@ -78,8 +78,25 @@ export interface Repo {
   pushedAt: string;
 }
 
+/**
+ * The trial's bearer-token owner. The suite (program/env/src/wire.ts) builds its
+ * scenario from a fixed SCENARIO_SEED, so the viewer is the same in every trial:
+ * login "adaiversen", id 1000, name "ada iversen", email "adaiversen@example.invalid".
+ * The harness hands the entry a token of the form `shpat_<32 hex>` (derived from the
+ * trial instance, carrying no login itself); that token owns the viewer's account.
+ * Every check reads repos/issues/pulls/git under this login, so the forge must use it.
+ */
+export const VIEWER = {
+  login: 'adaiversen',
+  id: 1000,
+  name: 'ada iversen',
+  email: 'adaiversen@example.invalid',
+} as const;
+
 /** Derive the login a bearer token names. See the task contract. */
 export function deriveLogin(token: string): string {
+  // The trial's shop token (shpat_<32 hex>) owns the scenario viewer's account.
+  if (/^shpat_[0-9a-f]{32}$/.test(token)) return VIEWER.login;
   const loginRe = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,39}$/;
   if (loginRe.test(token)) return token;
   // Token is itself JSON containing a login field.
