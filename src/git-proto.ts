@@ -171,13 +171,9 @@ function v0Advertisement(repo: Repo, service: 'git-upload-pack' | 'git-receive-p
   const tip = repo.refs.get(defaultRef);
   const lines: string[] = [`${tip ?? ZERO_OID} HEAD`];
   const refs = sortedRefs(repo);
-  if (refs.length === 0) {
-    lines.push(`${ZERO_OID} ${defaultRef}`);
-  } else {
-    for (const ref of refs) {
-      lines.push(`${ref.oid} ${ref.name}`);
-      if (ref.peeled !== undefined) lines.push(`${ref.peeled} ${ref.name}^{}`);
-    }
+  for (const ref of refs) {
+    lines.push(`${ref.oid} ${ref.name}`);
+    if (ref.peeled !== undefined) lines.push(`${ref.peeled} ${ref.name}^{}`);
   }
   lines.forEach((line, index) => {
     parts.push(pktLine(index === 0 ? `${line}\0${caps}\n` : `${line}\n`));
@@ -264,9 +260,9 @@ function handleLsRefs(repo: Repo, lines: (string | null)[], res: ServerResponse)
     if (peel && ref.peeled !== undefined) line += ` peeled:${ref.peeled}`;
     out.push(line);
   }
-  if (tip === undefined && matches(defaultRef)) {
-    out.push(`unborn ${defaultRef}`);
-  }
+  // An unborn default branch is conveyed by the HEAD line above alone:
+  // refs/heads/<default> does not exist yet, so it must not be listed as
+  // an (unborn) ref — clients treat any refs/ line as an existing ref.
   const parts = out.map((line) => pktLine(`${line}\n`));
   parts.push(pktFlush());
   sendRaw(res, 200, Buffer.concat(parts), {
